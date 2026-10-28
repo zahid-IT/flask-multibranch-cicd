@@ -1,0 +1,110 @@
+---
+- name: Deploy Flask application
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    app_dir: /opt/flask-multibranch
+    app_port: 5000
+
+    environment_config:
+      dev:
+        container_name: flask-multibranch-dev
+        image_name: flask-multibranch:dev
+      staging:
+        container_name: flask-multibranch-staging
+        image_name: flask-multibranch:staging
+      prod:
+        container_name: flask-multibranch-prod
+        image_name: flask-multibranch:prod
+
+  tasks:
+    - name: Determine deployment environment
+      ansible.builtin.set_fact:
+        deployment_env: "{{ group_names | intersect(['dev', 'staging', 'prod']) | first }}"
+
+    - name: Set environment-specific configuration
+      ansible.builtin.set_fact:
+        container_name: "{{ environment_config[deployment_env].container_name }}"
+        image_name: "{{ environment_config[deployment_env].image_name }}"
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy Dockerfile
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../Dockerfile"
+        dest: "{{ app_dir }}/Dockerfile"
+        mode: "0644"
+
+    - name: Copy requirements
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../requirements.txt"
+        dest: "{{ app_dir }}/requirements.txt"
+        mode: "0644"
+
+    - name: Copy Flask application
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../app/"
+        dest: "{{ app_dir }}/app/"
+        mode: "0644"
+
+    - name: Build Docker image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - build
+          - -t
+          - "{{ image_name }}"
+          - "{{ app_dir }}"
+      register: docker_build
+      changed_when: true
+
+    - name: Remove existing container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - rm
+          - -f
+          - "{{ container_name }}"
+      register: remove_container
+      failed_when: remove_container.rc not in [0, 1]
+      changed_when: remove_container.rc == 0
+
+    - name: Start Flask container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - run
+          - -d
+          - --name
+          - "{{ container_name }}"
+          - --restart
+          - unless-stopped
+          - -p
+          - "{{ app_port }}:{{ app_port }}"
+          - "{{ image_name }}"
+      register: container_start
+      changed_when: container_start.rc == 0
+
+    - name: Verify container is running
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - --format
+          - "{{ '{{.State.Running}}' }}"
+          - "{{ container_name }}"
+      register: container_status
+      changed_when: false
+      failed_when: container_status.stdout != "true"
+
+    - name: Display deployment information
+      ansible.builtin.debug:
+        msg: >-
+          Successfully deployed {{ container_name }}
+          to {{ deployment_env }} on {{ inventory_hostname }}.
