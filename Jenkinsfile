@@ -10,7 +10,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
         ANSIBLE_SSH_CREDENTIALS = 'ansible-ssh-key'
         // Set this to your Docker Hub repository, e.g. zahidbilal/flask-multibranch-demo
-        IMAGE_NAME = 'YOUR_DOCKERHUB_USERNAME/flask-multibranch-demo'
+        IMAGE_NAME = 'zahidbilal/flask-multibranch-demo'
     }
 
     stages {
