@@ -1,0 +1,41 @@
+---
+- name: Fix DNS on all remote Ubuntu servers
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Configure public DNS servers on the default network interface
+      ansible.builtin.command:
+        argv:
+          - resolvectl
+          - dns
+          - "{{ ansible_default_ipv4.interface }}"
+          - 8.8.8.8
+          - 1.1.1.1
+      changed_when: true
+
+    - name: Enable DNS default route on the network interface
+      ansible.builtin.command:
+        argv:
+          - resolvectl
+          - default-route
+          - "{{ ansible_default_ipv4.interface }}"
+          - "yes"
+      changed_when: true
+
+    - name: Verify DNS resolution
+      ansible.builtin.command:
+        argv:
+          - getent
+          - hosts
+          - security.ubuntu.com
+      register: dns_test
+      changed_when: false
+      retries: 5
+      delay: 2
+      until: dns_test.rc == 0
+
+    - name: Display DNS resolution result
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} resolved security.ubuntu.com: {{ dns_test.stdout_lines }}"

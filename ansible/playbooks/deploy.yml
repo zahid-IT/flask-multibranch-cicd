@@ -1,0 +1,43 @@
+---
+- name: Deploy Flask application container
+  hosts: "{{ target_group }}"
+  become: true
+  vars:
+    app_container_name: flask-demo
+    app_port: 5000
+  tasks:
+    - name: Pull selected image from Docker Hub
+      ansible.builtin.command:
+        argv:
+          - docker
+          - pull
+          - "{{ image_name }}:{{ image_tag }}"
+
+    - name: Remove existing application container if present
+      ansible.builtin.shell: docker rm -f {{ app_container_name }} || true
+      changed_when: true
+
+    - name: Start application container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - run
+          - --detach
+          - --name
+          - "{{ app_container_name }}"
+          - --restart
+          - unless-stopped
+          - --publish
+          - "{{ app_port }}:5000"
+          - --env
+          - "APP_ENV={{ target_group }}"
+          - "{{ image_name }}:{{ image_tag }}"
+
+    - name: Wait for application health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_port }}/health"
+        status_code: 200
+      register: health_result
+      retries: 10
+      delay: 3
+      until: health_result.status == 200
