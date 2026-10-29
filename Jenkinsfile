@@ -149,15 +149,10 @@ pipeline {
                         sh """
                             set -eu
 
-                            ssh \
-                                -o BatchMode=yes \
+                            ssh -o BatchMode=yes \
                                 -o StrictHostKeyChecking=accept-new \
                                 ${ANSIBLE_USER}@${ANSIBLE_HOST} \
-                                'cd ~/flask-multibranch/ansible &&
-                                 ansible-playbook playbooks/deploy.yml
-                                 -e target_group=${target}
-                                 -e image_name=${IMAGE_NAME}
-                                 -e image_tag=${imageTag}'
+                                'cd /home/ansible/flask-multibranch/ansible && ansible-playbook playbooks/deploy.yml -e target_group=${target} -e image_name=${IMAGE_NAME} -e image_tag=${imageTag}'
                         """
                     }
                 }
