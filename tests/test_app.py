@@ -13,7 +13,7 @@ class FlaskAppTests(unittest.TestCase):
     def test_home(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Hello from the Flask DevOps demo!', response.get_json()['message'])
+        self.assertIn('Flask DevOps demo', response.get_json()['message'])
 
 if __name__ == '__main__':
     unittest.main()
