@@ -6,7 +6,7 @@ APP_ENV = os.getenv("APP_ENV", "local")
 
 @app.get("/")
 def home():
-    return jsonify(message="Hello from the Flask DevOps demo!", environment=APP_ENV)
+    return jsonify(message="Hello from zahid you have automated the Flask DevOps demo app sucessfully!", environment=APP_ENV)
 
 @app.get("/health")
 def health():
